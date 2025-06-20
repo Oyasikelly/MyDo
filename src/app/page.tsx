@@ -57,6 +57,9 @@ export default function Home() {
 		overdue: 0,
 	});
 
+	const completionRate =
+		taskStats.total > 0 ? (taskStats.completed / taskStats.total) * 100 : 0;
+
 	const fetchTaskStats = async () => {
 		try {
 			const response = await fetch("/api/tasks");
@@ -90,8 +93,7 @@ export default function Home() {
 		}
 	}, [session]);
 
-	const completionRate =
-		taskStats.total > 0 ? (taskStats.completed / taskStats.total) * 100 : 0;
+	console.log("DATABASE_URL =", process.env.DATABASE_URL);
 
 	const features = [
 		{
