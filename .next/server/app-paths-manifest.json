@@ -1,9 +1,0 @@
-{
-  "/page": "app/page.js",
-  "/profile/page": "app/profile/page.js",
-  "/login/page": "app/login/page.js",
-  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
-  "/api/profile/route": "app/api/profile/route.js",
-  "/api/notifications/route": "app/api/notifications/route.js",
-  "/api/tasks/route": "app/api/tasks/route.js"
-}
