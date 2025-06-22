@@ -21,6 +21,7 @@ model User {
   updatedAt DateTime @updatedAt
   tasks     Task[]
   notifications Notification[]
+  passwordResets PasswordReset[]
 }
 
 model Task {
@@ -53,6 +54,16 @@ model Notification {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   taskId    String?
   task      Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  email     String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  used      Boolean  @default(false)
+  user      User     @relation(fields: [email], references: [email], onDelete: Cascade)
 }
 
 enum Priority {

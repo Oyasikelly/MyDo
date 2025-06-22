@@ -57,6 +57,57 @@ export class NotificationService {
 		}
 	}
 
+	static async createOnlineStatusNotification(
+		userId: string,
+		isOnline: boolean
+	) {
+		try {
+			if (isOnline) {
+				// Create a welcome back notification
+				await prisma.notification.create({
+					data: {
+						type: NotificationType.IN_APP,
+						title: "Welcome Back!",
+						message: "You're back online. Check for any missed updates.",
+						userId: userId,
+					},
+				});
+			}
+		} catch (error) {
+			console.error("Error creating online status notification:", error);
+		}
+	}
+
+	static async getMissedUpdates(userId: string, lastOnlineTime?: Date) {
+		try {
+			const whereClause: any = { userId };
+
+			if (lastOnlineTime) {
+				whereClause.createdAt = { gt: lastOnlineTime };
+			}
+
+			const newNotifications = await prisma.notification.count({
+				where: whereClause,
+			});
+
+			const updatedTasks = await prisma.task.count({
+				where: {
+					userId,
+					updatedAt: lastOnlineTime ? { gt: lastOnlineTime } : undefined,
+				},
+			});
+
+			return {
+				newNotifications,
+				updatedTasks,
+				hasUpdates: newNotifications > 0 || updatedTasks > 0,
+			};
+		} catch (error) {
+			console.error("Error getting missed updates:", error);
+			return { newNotifications: 0, updatedTasks: 0, hasUpdates: false };
+		}
+	}
+
 	private static calculateNextDueDate(
 		currentDueDate: Date,
 		frequency: string,

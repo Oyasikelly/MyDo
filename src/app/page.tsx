@@ -18,6 +18,10 @@ import {
 	Chip,
 	Avatar,
 	LinearProgress,
+	IconButton,
+	Divider,
+	Badge,
+	Tooltip,
 } from "@mui/material";
 import {
 	Add as AddIcon,
@@ -30,10 +34,35 @@ import {
 	Person as PersonIcon,
 	CalendarToday as CalendarIcon,
 	Star as StarIcon,
+	AccessTime as AccessTimeIcon,
+	Today as TodayIcon,
+	Upcoming as UpcomingIcon,
+	Done as DoneIcon,
+	PriorityHigh as PriorityHighIcon,
+	Notifications as NotificationsIcon,
+	Dashboard as DashboardIcon,
+	Analytics as AnalyticsIcon,
+	Settings as SettingsIcon,
+	Help as HelpIcon,
+	EmojiEvents as TrophyIcon,
+	LocalFireDepartment as FireIcon,
+	Psychology as BrainIcon,
+	Speed as SpeedIcon,
+	Lightbulb as LightbulbIcon,
+	FilterList as FilterIcon,
+	Search as SearchIcon,
+	Print as PrintIcon,
+	Share as ShareIcon,
+	Archive as ArchiveIcon,
+	RestoreFromTrash as RestoreIcon,
+	Assessment as AssessmentIcon,
+	Timeline as TimelineIcon,
+	Insights as InsightsIcon,
 } from "@mui/icons-material";
 import Link from "next/link";
 import TaskList from "@/components/TaskList";
-import { Task, Status } from "@prisma/client";
+import { Task, Status, Priority } from "@prisma/client";
+import TaskForm from "@/components/TaskForm";
 
 interface TaskStats {
 	total: number;
@@ -41,6 +70,9 @@ interface TaskStats {
 	inProgress: number;
 	completed: number;
 	overdue: number;
+	today: number;
+	upcoming: number;
+	highPriority: number;
 }
 
 export default function Home() {
@@ -55,7 +87,11 @@ export default function Home() {
 		inProgress: 0,
 		completed: 0,
 		overdue: 0,
+		today: 0,
+		upcoming: 0,
+		highPriority: 0,
 	});
+	const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
 
 	const completionRate =
 		taskStats.total > 0 ? (taskStats.completed / taskStats.total) * 100 : 0;
@@ -65,6 +101,10 @@ export default function Home() {
 			const response = await fetch("/api/tasks");
 			const tasks: Task[] = await response.json();
 
+			const today = new Date();
+			const tomorrow = new Date(today);
+			tomorrow.setDate(tomorrow.getDate() + 1);
+
 			const stats = {
 				total: tasks.length,
 				pending: tasks.filter((t) => t.status === "PENDING").length,
@@ -72,16 +112,21 @@ export default function Home() {
 				completed: tasks.filter((t) => t.status === "COMPLETED").length,
 				overdue: tasks.filter((t) => {
 					const dueDate = new Date(t.dueDate);
-					const now = new Date();
-					const daysUntilDue = Math.ceil(
-						(dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-					);
-					return daysUntilDue < 0 && t.status !== "COMPLETED";
+					return dueDate < today && t.status !== "COMPLETED";
 				}).length,
+				today: tasks.filter((t) => {
+					const dueDate = new Date(t.dueDate);
+					return dueDate.toDateString() === today.toDateString();
+				}).length,
+				upcoming: tasks.filter((t) => {
+					const dueDate = new Date(t.dueDate);
+					return dueDate >= tomorrow && t.status !== "COMPLETED";
+				}).length,
+				highPriority: tasks.filter((t) => t.priority === "HIGH").length,
 			};
 
 			setTaskStats(stats);
-			setRecentTasks(tasks.slice(0, 5)); // Get 5 most recent tasks
+			setRecentTasks(tasks.slice(0, 5));
 		} catch (error) {
 			console.error("Error fetching task stats:", error);
 		}
@@ -93,32 +138,45 @@ export default function Home() {
 		}
 	}, [session]);
 
-	console.log("DATABASE_URL =", process.env.DATABASE_URL);
+	const getMotivationalMessage = () => {
+		const hour = new Date().getHours();
+		if (hour < 12) return "Good morning! Ready to conquer the day?";
+		if (hour < 17) return "Good afternoon! Keep up the great work!";
+		return "Good evening! Time to wrap up and plan for tomorrow!";
+	};
+
+	const getProductivityScore = () => {
+		if (taskStats.total === 0) return 0;
+		const score = (taskStats.completed / taskStats.total) * 100;
+		return Math.min(score + taskStats.inProgress * 10, 100);
+	};
 
 	const features = [
 		{
-			icon: <TrendingUpIcon sx={{ fontSize: 40, color: "primary.main" }} />,
+			icon: <BrainIcon sx={{ fontSize: 40, color: "primary.main" }} />,
 			title: "Smart Organization",
 			description:
-				"Organize tasks by priority, status, and due dates with intelligent sorting.",
+				"AI-powered task organization with intelligent prioritization.",
+			color: "primary.main",
 		},
 		{
-			icon: <CheckCircleIcon sx={{ fontSize: 40, color: "success.main" }} />,
-			title: "Progress Tracking",
+			icon: <TrophyIcon sx={{ fontSize: 40, color: "success.main" }} />,
+			title: "Achievement Tracking",
 			description:
-				"Track your progress with real-time statistics and completion rates.",
+				"Track your progress and celebrate milestones with gamification.",
+			color: "success.main",
 		},
 		{
-			icon: <ScheduleIcon sx={{ fontSize: 40, color: "warning.main" }} />,
-			title: "Deadline Management",
-			description:
-				"Never miss a deadline with smart notifications and overdue tracking.",
+			icon: <FireIcon sx={{ fontSize: 40, color: "warning.main" }} />,
+			title: "Productivity Boost",
+			description: "Stay focused with time tracking and productivity insights.",
+			color: "warning.main",
 		},
 		{
-			icon: <AssignmentIcon sx={{ fontSize: 40, color: "info.main" }} />,
-			title: "Flexible Workflows",
-			description:
-				"Customize your workflow with tags, attachments, and recurring tasks.",
+			icon: <AnalyticsIcon sx={{ fontSize: 40, color: "info.main" }} />,
+			title: "Advanced Analytics",
+			description: "Get detailed insights into your productivity patterns.",
+			color: "info.main",
 		},
 	];
 
@@ -132,21 +190,28 @@ export default function Home() {
 					py={8}>
 					<Typography
 						variant={isMobile ? "h3" : "h2"}
-						gutterBottom>
+						gutterBottom
+						sx={{
+							background: "linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)",
+							backgroundClip: "text",
+							WebkitBackgroundClip: "text",
+							WebkitTextFillColor: "transparent",
+							fontWeight: "bold",
+						}}>
 						Welcome to MyDo
 					</Typography>
 					<Typography
 						variant="h5"
 						color="text.secondary"
 						paragraph>
-						Your personal task management companion
+						Your AI-powered task management companion
 					</Typography>
 					<Typography
 						variant="body1"
 						color="text.secondary"
 						sx={{ mb: 4, maxWidth: 600, mx: "auto" }}>
-						Organize your life, boost productivity, and achieve your goals with
-						our intuitive task management platform.
+						Transform your productivity with intelligent task organization, time
+						tracking, and personalized insights. Achieve more, stress less.
 					</Typography>
 					<Box
 						sx={{
@@ -160,7 +225,11 @@ export default function Home() {
 							href="/login"
 							variant="contained"
 							size="large"
-							startIcon={<PersonIcon />}>
+							startIcon={<PersonIcon />}
+							sx={{
+								background: "linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)",
+								boxShadow: "0 3px 5px 2px rgba(33, 203, 243, .3)",
+							}}>
 							Get Started
 						</Button>
 						<Button
@@ -173,7 +242,6 @@ export default function Home() {
 					</Box>
 				</Box>
 
-				{/* Features Section */}
 				<Box sx={{ py: 8 }}>
 					<Typography
 						variant="h4"
@@ -201,7 +269,8 @@ export default function Home() {
 										transition: "all 0.3s ease",
 										"&:hover": {
 											transform: "translateY(-8px)",
-											boxShadow: 4,
+											boxShadow: 8,
+											borderLeft: `4px solid ${feature.color}`,
 										},
 									}}>
 									<Box sx={{ mb: 2 }}>{feature.icon}</Box>
@@ -226,266 +295,461 @@ export default function Home() {
 
 	return (
 		<Container
-			maxWidth="lg"
+			maxWidth="xl"
 			sx={{ py: 4 }}>
-			{/* Welcome Section */}
-			<Box sx={{ mb: 4 }}>
-				<Typography
-					variant={isMobile ? "h4" : "h3"}
-					gutterBottom>
-					Welcome back, {session.user?.name || "User"}! 👋
-				</Typography>
-				<Typography
-					variant="body1"
-					color="text.secondary">
-					Let's make today productive. Here's what's happening with your tasks.
-				</Typography>
+			{/* Hero Section */}
+			<Box sx={{ mb: 6 }}>
+				<Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+					<Avatar
+						sx={{
+							width: 60,
+							height: 60,
+							bgcolor: "primary.main",
+							fontSize: "1.5rem",
+						}}>
+						{session.user?.name?.charAt(0) || "U"}
+					</Avatar>
+					<Box>
+						<Typography
+							variant={isMobile ? "h4" : "h3"}
+							gutterBottom>
+							{getMotivationalMessage()}
+						</Typography>
+						<Typography
+							variant="h6"
+							color="text.secondary">
+							{session.user?.name || "User"}
+						</Typography>
+					</Box>
+				</Box>
 			</Box>
 
-			{/* Quick Stats */}
+			{/* Main Dashboard Grid */}
 			<Grid
 				container
-				spacing={3}
-				sx={{ mb: 4 }}>
+				spacing={3}>
+				{/* Left Column - Stats & Quick Actions */}
 				<Grid
 					item
 					xs={12}
-					md={8}>
-					<Paper
-						elevation={2}
-						sx={{ p: 3 }}>
-						<Box
-							sx={{
-								display: "flex",
-								justifyContent: "space-between",
-								alignItems: "center",
-								mb: 2,
-							}}>
-							<Typography variant="h6">Task Overview</Typography>
-							<Button
-								component={Link}
-								href="/tasks"
-								variant="outlined"
-								size="small"
-								endIcon={<ArrowForwardIcon />}>
-								View All
-							</Button>
-						</Box>
+					lg={8}>
+					<Grid
+						container
+						spacing={3}>
+						{/* Productivity Score Card */}
 						<Grid
-							container
-							spacing={2}>
-							<Grid
-								item
-								xs={6}
-								sm={3}>
-								<Box textAlign="center">
+							item
+							xs={12}>
+							<Card
+								elevation={3}
+								sx={{
+									p: 3,
+									background:
+										"linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+									color: "white",
+									position: "relative",
+									overflow: "hidden",
+								}}>
+								<Box sx={{ position: "relative", zIndex: 2 }}>
 									<Typography
-										variant="h4"
-										color="primary.main">
-										{taskStats.total}
+										variant="h6"
+										gutterBottom>
+										Productivity Score
 									</Typography>
-									<Typography
-										variant="body2"
-										color="text.secondary">
-										Total Tasks
-									</Typography>
+									<Box sx={{ display: "flex", alignItems: "center", gap: 3 }}>
+										<Box sx={{ position: "relative" }}>
+											<CircularProgress
+												variant="determinate"
+												value={getProductivityScore()}
+												size={80}
+												thickness={4}
+												sx={{ color: "white" }}
+											/>
+											<Box
+												sx={{
+													position: "absolute",
+													top: "50%",
+													left: "50%",
+													transform: "translate(-50%, -50%)",
+												}}>
+												<Typography
+													variant="h6"
+													fontWeight="bold">
+													{getProductivityScore().toFixed(0)}%
+												</Typography>
+											</Box>
+										</Box>
+										<Box>
+											<Typography
+												variant="body1"
+												sx={{ mb: 1 }}>
+												You're doing great! Keep up the momentum.
+											</Typography>
+											<Chip
+												label={`${taskStats.completed} tasks completed`}
+												sx={{
+													bgcolor: "rgba(255,255,255,0.2)",
+													color: "white",
+												}}
+											/>
+										</Box>
+									</Box>
 								</Box>
-							</Grid>
-							<Grid
-								item
-								xs={6}
-								sm={3}>
-								<Box textAlign="center">
-									<Typography
-										variant="h4"
-										color="warning.main">
-										{taskStats.pending}
-									</Typography>
-									<Typography
-										variant="body2"
-										color="text.secondary">
-										Pending
-									</Typography>
-								</Box>
-							</Grid>
-							<Grid
-								item
-								xs={6}
-								sm={3}>
-								<Box textAlign="center">
-									<Typography
-										variant="h4"
-										color="success.main">
-										{taskStats.completed}
-									</Typography>
-									<Typography
-										variant="body2"
-										color="text.secondary">
-										Completed
-									</Typography>
-								</Box>
-							</Grid>
-							<Grid
-								item
-								xs={6}
-								sm={3}>
-								<Box textAlign="center">
-									<Typography
-										variant="h4"
-										color="error.main">
-										{taskStats.overdue}
-									</Typography>
-									<Typography
-										variant="body2"
-										color="text.secondary">
-										Overdue
-									</Typography>
-								</Box>
-							</Grid>
+							</Card>
 						</Grid>
 
-						{/* Progress Bar */}
-						<Box sx={{ mt: 3 }}>
-							<Box
-								sx={{
-									display: "flex",
-									justifyContent: "space-between",
-									alignItems: "center",
-									mb: 1,
-								}}>
+						{/* Task Overview Cards */}
+						<Grid
+							item
+							xs={12}
+							sm={6}
+							md={3}>
+							<Card
+								elevation={2}
+								sx={{ p: 2, textAlign: "center" }}>
+								<Box
+									sx={{
+										display: "flex",
+										alignItems: "center",
+										justifyContent: "center",
+										mb: 1,
+									}}>
+									<TodayIcon color="primary" />
+								</Box>
+								<Typography
+									variant="h4"
+									color="primary.main"
+									fontWeight="bold">
+									{taskStats.today}
+								</Typography>
 								<Typography
 									variant="body2"
 									color="text.secondary">
-									Completion Rate
+									Today's Tasks
+								</Typography>
+							</Card>
+						</Grid>
+
+						<Grid
+							item
+							xs={12}
+							sm={6}
+							md={3}>
+							<Card
+								elevation={2}
+								sx={{ p: 2, textAlign: "center" }}>
+								<Box
+									sx={{
+										display: "flex",
+										alignItems: "center",
+										justifyContent: "center",
+										mb: 1,
+									}}>
+									<UpcomingIcon color="warning" />
+								</Box>
+								<Typography
+									variant="h4"
+									color="warning.main"
+									fontWeight="bold">
+									{taskStats.upcoming}
 								</Typography>
 								<Typography
 									variant="body2"
-									fontWeight="bold">
-									{completionRate.toFixed(1)}%
+									color="text.secondary">
+									Upcoming
 								</Typography>
-							</Box>
-							<LinearProgress
-								variant="determinate"
-								value={completionRate}
-								sx={{ height: 8, borderRadius: 4 }}
-							/>
-						</Box>
-					</Paper>
+							</Card>
+						</Grid>
+
+						<Grid
+							item
+							xs={12}
+							sm={6}
+							md={3}>
+							<Card
+								elevation={2}
+								sx={{ p: 2, textAlign: "center" }}>
+								<Box
+									sx={{
+										display: "flex",
+										alignItems: "center",
+										justifyContent: "center",
+										mb: 1,
+									}}>
+									<PriorityHighIcon color="error" />
+								</Box>
+								<Typography
+									variant="h4"
+									color="error.main"
+									fontWeight="bold">
+									{taskStats.highPriority}
+								</Typography>
+								<Typography
+									variant="body2"
+									color="text.secondary">
+									High Priority
+								</Typography>
+							</Card>
+						</Grid>
+
+						<Grid
+							item
+							xs={12}
+							sm={6}
+							md={3}>
+							<Card
+								elevation={2}
+								sx={{ p: 2, textAlign: "center" }}>
+								<Box
+									sx={{
+										display: "flex",
+										alignItems: "center",
+										justifyContent: "center",
+										mb: 1,
+									}}>
+									<DoneIcon color="success" />
+								</Box>
+								<Typography
+									variant="h4"
+									color="success.main"
+									fontWeight="bold">
+									{taskStats.completed}
+								</Typography>
+								<Typography
+									variant="body2"
+									color="text.secondary">
+									Completed
+								</Typography>
+							</Card>
+						</Grid>
+
+						{/* Recent Tasks */}
+						<Grid
+							item
+							xs={12}>
+							<Card
+								elevation={2}
+								sx={{ p: 3 }}>
+								<Box
+									sx={{
+										display: "flex",
+										justifyContent: "space-between",
+										alignItems: "center",
+										mb: 3,
+									}}>
+									<Typography variant="h6">Recent Tasks</Typography>
+									<Button
+										component={Link}
+										href="/tasks"
+										variant="outlined"
+										size="small"
+										endIcon={<ArrowForwardIcon />}>
+										View All
+									</Button>
+								</Box>
+								<TaskList
+									showStats={false}
+									maxTasks={5}
+								/>
+							</Card>
+						</Grid>
+					</Grid>
 				</Grid>
 
+				{/* Right Column - Quick Actions & Insights */}
 				<Grid
 					item
 					xs={12}
-					md={4}>
-					<Paper
-						elevation={2}
-						sx={{ p: 3, height: "100%" }}>
-						<Typography
-							variant="h6"
-							gutterBottom>
-							Quick Actions
-						</Typography>
-						<Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-							<Button
-								variant="contained"
-								startIcon={<AddIcon />}
-								fullWidth
-								component={Link}
-								href="/tasks">
-								Add New Task
-							</Button>
-							<Button
-								variant="outlined"
-								startIcon={<CalendarIcon />}
-								fullWidth
-								component={Link}
-								href="/tasks">
-								View Calendar
-							</Button>
-							<Button
-								variant="outlined"
-								startIcon={<StarIcon />}
-								fullWidth
-								component={Link}
-								href="/profile">
-								View Profile
-							</Button>
-						</Box>
-					</Paper>
+					lg={4}>
+					<Grid
+						container
+						spacing={3}>
+						{/* Quick Actions */}
+						<Grid
+							item
+							xs={12}>
+							<Card
+								elevation={2}
+								sx={{ p: 3 }}>
+								<Typography
+									variant="h6"
+									gutterBottom>
+									Quick Actions
+								</Typography>
+								<Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+									<Button
+										variant="contained"
+										startIcon={<AddIcon />}
+										fullWidth
+										onClick={() => setIsTaskFormOpen(true)}
+										sx={{
+											background:
+												"linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)",
+											boxShadow: "0 3px 5px 2px rgba(33, 203, 243, .3)",
+										}}>
+										Add New Task
+									</Button>
+									<Button
+										variant="outlined"
+										startIcon={<CalendarIcon />}
+										fullWidth
+										component={Link}
+										href="/calendar">
+										View Calendar
+									</Button>
+									<Button
+										variant="outlined"
+										startIcon={<AnalyticsIcon />}
+										fullWidth
+										component={Link}
+										href="/analytics">
+										View Analytics
+									</Button>
+								</Box>
+							</Card>
+						</Grid>
+
+						{/* Progress Overview */}
+						<Grid
+							item
+							xs={12}>
+							<Card
+								elevation={2}
+								sx={{ p: 3 }}>
+								<Typography
+									variant="h6"
+									gutterBottom>
+									Progress Overview
+								</Typography>
+								<Box sx={{ mb: 3 }}>
+									<Box
+										sx={{
+											display: "flex",
+											justifyContent: "space-between",
+											mb: 1,
+										}}>
+										<Typography variant="body2">Completion Rate</Typography>
+										<Typography
+											variant="body2"
+											fontWeight="bold">
+											{completionRate.toFixed(1)}%
+										</Typography>
+									</Box>
+									<LinearProgress
+										variant="determinate"
+										value={completionRate}
+										sx={{ height: 8, borderRadius: 4 }}
+									/>
+								</Box>
+								<Box
+									sx={{
+										display: "flex",
+										justifyContent: "space-between",
+										mb: 1,
+									}}>
+									<Typography variant="body2">Total Tasks</Typography>
+									<Typography
+										variant="body2"
+										fontWeight="bold">
+										{taskStats.total}
+									</Typography>
+								</Box>
+								<Box
+									sx={{
+										display: "flex",
+										justifyContent: "space-between",
+										mb: 1,
+									}}>
+									<Typography variant="body2">In Progress</Typography>
+									<Typography
+										variant="body2"
+										fontWeight="bold">
+										{taskStats.inProgress}
+									</Typography>
+								</Box>
+								<Box sx={{ display: "flex", justifyContent: "space-between" }}>
+									<Typography variant="body2">Overdue</Typography>
+									<Typography
+										variant="body2"
+										fontWeight="bold"
+										color="error.main">
+										{taskStats.overdue}
+									</Typography>
+								</Box>
+							</Card>
+						</Grid>
+
+						{/* Quick Tips */}
+						<Grid
+							item
+							xs={12}>
+							<Card
+								elevation={2}
+								sx={{ p: 3, bgcolor: "primary.50" }}>
+								<Typography
+									variant="h6"
+									gutterBottom>
+									💡 Pro Tips
+								</Typography>
+								<Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+									<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+										<CheckCircleIcon
+											color="success"
+											fontSize="small"
+										/>
+										<Typography variant="body2">
+											Use time tracking for better planning
+										</Typography>
+									</Box>
+									<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+										<ScheduleIcon
+											color="warning"
+											fontSize="small"
+										/>
+										<Typography variant="body2">
+											Set realistic time estimates
+										</Typography>
+									</Box>
+									<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+										<TrendingUpIcon
+											color="primary"
+											fontSize="small"
+										/>
+										<Typography variant="body2">
+											Review your productivity patterns
+										</Typography>
+									</Box>
+								</Box>
+							</Card>
+						</Grid>
+					</Grid>
 				</Grid>
 			</Grid>
 
-			{/* Recent Tasks */}
-			<Box sx={{ mb: 4 }}>
-				<Box
-					sx={{
-						display: "flex",
-						justifyContent: "space-between",
-						alignItems: "center",
-						mb: 2,
-					}}>
-					<Typography variant="h6">Recent Tasks</Typography>
-					<Button
-						component={Link}
-						href="/tasks"
-						variant="text"
-						endIcon={<ArrowForwardIcon />}>
-						View All Tasks
-					</Button>
-				</Box>
-				<TaskList
-					showStats={false}
-					maxTasks={5}
-				/>
-			</Box>
+			{/* Floating Action Button */}
+			<Fab
+				color="primary"
+				aria-label="add task"
+				sx={{
+					position: "fixed",
+					bottom: 16,
+					right: 16,
+					background: "linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)",
+					boxShadow: "0 3px 5px 2px rgba(33, 203, 243, .3)",
+				}}
+				onClick={() => setIsTaskFormOpen(true)}>
+				<AddIcon />
+			</Fab>
 
-			{/* Quick Tips */}
-			<Paper
-				elevation={1}
-				sx={{ p: 3, bgcolor: "primary.50" }}>
-				<Typography
-					variant="h6"
-					gutterBottom>
-					💡 Pro Tips
-				</Typography>
-				<Grid
-					container
-					spacing={2}>
-					<Grid
-						item
-						xs={12}
-						md={4}>
-						<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-							<CheckCircleIcon color="success" />
-							<Typography variant="body2">
-								Use tags to organize related tasks
-							</Typography>
-						</Box>
-					</Grid>
-					<Grid
-						item
-						xs={12}
-						md={4}>
-						<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-							<ScheduleIcon color="warning" />
-							<Typography variant="body2">
-								Set realistic due dates for better planning
-							</Typography>
-						</Box>
-					</Grid>
-					<Grid
-						item
-						xs={12}
-						md={4}>
-						<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-							<TrendingUpIcon color="primary" />
-							<Typography variant="body2">
-								Review your progress regularly
-							</Typography>
-						</Box>
-					</Grid>
-				</Grid>
-			</Paper>
+			{/* Task Form */}
+			<TaskForm
+				open={isTaskFormOpen}
+				onClose={() => setIsTaskFormOpen(false)}
+				onTaskAdded={() => {
+					fetchTaskStats();
+					setIsTaskFormOpen(false);
+				}}
+			/>
 		</Container>
 	);
 }

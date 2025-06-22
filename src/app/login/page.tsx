@@ -115,7 +115,23 @@ export default function LoginPage() {
 						</Button>
 					</Box>
 
-					<Box sx={{ textAlign: "center", mt: 2 }}>
+					<Box
+						sx={{
+							textAlign: "center",
+							mt: 2,
+							display: "flex",
+							flexDirection: "column",
+							gap: 1,
+						}}>
+						<Link
+							href="/forgot-password"
+							style={{
+								color: "#1976d2",
+								textDecoration: "underline",
+								fontSize: "14px",
+							}}>
+							Forgot your password?
+						</Link>
 						<Link
 							href="/register"
 							style={{ color: "#1976d2", textDecoration: "underline" }}>

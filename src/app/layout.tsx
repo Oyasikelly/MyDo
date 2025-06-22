@@ -5,6 +5,7 @@ import { AuthProvider } from "@/components/providers/AuthProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import OnlineStatusDetector from "@/components/OnlineStatusDetector";
 
 const inter = Inter({
 	subsets: ["latin"],
@@ -40,16 +41,18 @@ export default function RootLayout({
 			<body className={inter.className}>
 				<AuthProvider>
 					<ThemeProvider>
-						<div
-							style={{
-								display: "flex",
-								flexDirection: "column",
-								minHeight: "100vh",
-							}}>
-							<Navigation />
-							<main style={{ flex: 1 }}>{children}</main>
-							<Footer />
-						</div>
+						<OnlineStatusDetector>
+							<div
+								style={{
+									display: "flex",
+									flexDirection: "column",
+									minHeight: "100vh",
+								}}>
+								<Navigation />
+								<main style={{ flex: 1 }}>{children}</main>
+								<Footer />
+							</div>
+						</OnlineStatusDetector>
 					</ThemeProvider>
 				</AuthProvider>
 			</body>

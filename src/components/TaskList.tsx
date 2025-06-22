@@ -41,6 +41,7 @@ import {
 	Assignment as AssignmentIcon,
 	Flag as FlagIcon,
 	CalendarToday as CalendarIcon,
+	AccessTime as AccessTimeIcon,
 } from "@mui/icons-material";
 import TaskForm from "./TaskForm";
 import { Task, Priority, Status } from "@prisma/client";
@@ -210,6 +211,29 @@ export default function TaskList({
 		if (days === 0) return "Due today";
 		if (days === 1) return "Due tomorrow";
 		return `Due in ${days} days`;
+	};
+
+	const formatTime = (timeString: string | null) => {
+		if (!timeString) return null;
+		try {
+			const [hours, minutes] = timeString.split(":");
+			const hour = parseInt(hours);
+			const ampm = hour >= 12 ? "PM" : "AM";
+			const displayHour = hour % 12 || 12;
+			return `${displayHour}:${minutes} ${ampm}`;
+		} catch {
+			return timeString;
+		}
+	};
+
+	const formatDuration = (minutes: number | null) => {
+		if (!minutes) return null;
+		if (minutes < 60) return `${minutes}m`;
+		const hours = Math.floor(minutes / 60);
+		const remainingMinutes = minutes % 60;
+		return remainingMinutes > 0
+			? `${hours}h ${remainingMinutes}m`
+			: `${hours}h`;
 	};
 
 	const stats = {
@@ -559,6 +583,38 @@ export default function TaskList({
 														{getDaysText(task.daysUntilDue || 0)}
 													</Typography>
 												</Box>
+												{task.dueTime && (
+													<Box sx={{ display: "flex", alignItems: "center" }}>
+														<AccessTimeIcon
+															sx={{
+																fontSize: 16,
+																mr: 0.5,
+																color: "text.secondary",
+															}}
+														/>
+														<Typography
+															variant="caption"
+															color="text.secondary">
+															{formatTime(task.dueTime)}
+														</Typography>
+													</Box>
+												)}
+												{task.estimatedDuration && (
+													<Box sx={{ display: "flex", alignItems: "center" }}>
+														<ScheduleIcon
+															sx={{
+																fontSize: 16,
+																mr: 0.5,
+																color: "text.secondary",
+															}}
+														/>
+														<Typography
+															variant="caption"
+															color="text.secondary">
+															{formatDuration(task.estimatedDuration)}
+														</Typography>
+													</Box>
+												)}
 												{task.tags && task.tags.length > 0 && (
 													<Box sx={{ display: "flex", gap: 0.5 }}>
 														{task.tags.slice(0, 2).map((tag, index) => (
