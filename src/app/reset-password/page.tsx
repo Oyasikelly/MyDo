@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
 	Container,
 	Paper,
@@ -13,22 +15,22 @@ import {
 	Link,
 } from "@mui/material";
 import { ArrowBack, Visibility, VisibilityOff } from "@mui/icons-material";
-import { useRouter, useSearchParams } from "next/navigation";
 
-export default function ResetPassword() {
+function ResetPasswordContent() {
+	const { data: session } = useSession();
 	const [password, setPassword] = useState("");
 	const [confirmPassword, setConfirmPassword] = useState("");
-	const [isLoading, setIsLoading] = useState(false);
-	const [message, setMessage] = useState("");
-	const [error, setError] = useState("");
 	const [showPassword, setShowPassword] = useState(false);
 	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 	const [isValidToken, setIsValidToken] = useState(false);
 	const [isCheckingToken, setIsCheckingToken] = useState(true);
+	const [isLoading, setIsLoading] = useState(false);
+	const [error, setError] = useState("");
+	const [message, setMessage] = useState("");
 
 	const router = useRouter();
 	const searchParams = useSearchParams();
-	const token = searchParams.get("token");
+	const token = searchParams?.get("token");
 
 	useEffect(() => {
 		if (token) {
@@ -232,7 +234,6 @@ export default function ResetPassword() {
 								type="submit"
 								fullWidth
 								variant="contained"
-								size="large"
 								disabled={isLoading || !password || !confirmPassword}
 								sx={{ mt: 3, mb: 2 }}>
 								{isLoading ? (
@@ -266,5 +267,36 @@ export default function ResetPassword() {
 				</Paper>
 			</Box>
 		</Container>
+	);
+}
+
+export default function ResetPassword() {
+	return (
+		<Suspense
+			fallback={
+				<Container maxWidth="sm">
+					<Box
+						sx={{
+							minHeight: "100vh",
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+						}}>
+						<Paper
+							elevation={3}
+							sx={{
+								p: 4,
+								width: "100%",
+								borderRadius: 2,
+								textAlign: "center",
+							}}>
+							<CircularProgress sx={{ mb: 2 }} />
+							<Typography>Loading...</Typography>
+						</Paper>
+					</Box>
+				</Container>
+			}>
+			<ResetPasswordContent />
+		</Suspense>
 	);
 }

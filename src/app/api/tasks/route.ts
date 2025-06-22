@@ -4,6 +4,9 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Task, Priority, Status, Frequency } from "@prisma/client";
 
+// Force dynamic rendering for this route
+export const dynamic = "force-dynamic";
+
 // GET /api/tasks - Get all tasks for the current user
 export async function GET() {
 	try {
