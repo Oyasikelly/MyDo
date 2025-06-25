@@ -145,8 +145,15 @@ export default function TaskForm({
 			setError("Due date is required");
 			return false;
 		}
-		if (new Date(formData.dueDate) < new Date()) {
-			setError("Due date cannot be in the past");
+
+		// Check if the combined date and time is in the past
+		const now = new Date();
+		const dueDateTime = new Date(
+			`${formData.dueDate}T${formData.dueTime || "00:00"}`
+		);
+
+		if (dueDateTime < now) {
+			setError("Due date and time cannot be in the past");
 			return false;
 		}
 		return true;
