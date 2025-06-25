@@ -22,6 +22,7 @@ model User {
   tasks     Task[]
   notifications Notification[]
   passwordResets PasswordReset[]
+  pushSubscriptions PushSubscription[]
 }
 
 model Task {
@@ -29,6 +30,7 @@ model Task {
   title       String
   description String?
   dueDate     DateTime
+  dueTime     String?
   priority    Priority @default(MEDIUM)
   status      Status   @default(PENDING)
   category    String?
@@ -64,6 +66,15 @@ model PasswordReset {
   createdAt DateTime @default(now())
   used      Boolean  @default(false)
   user      User     @relation(fields: [email], references: [email], onDelete: Cascade)
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  keys      Json
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 }
 
 enum Priority {

@@ -128,3 +128,13 @@ Distributed under the MIT License. See `LICENSE` for more information.
 Your Name - [@your_twitter](https://twitter.com/your_twitter) - email@example.com
 
 Project Link: [https://github.com/your-username/your-repo](https://github.com/your-username/your-repo)
+
+## Scheduled Notifications
+
+To send notifications and emails for overdue or soon-due tasks, run:
+
+```
+npm run send-task-notifications
+```
+
+You can schedule this command to run every hour/day using a process manager or external scheduler (e.g., cron, GitHub Actions, or a cloud scheduler).

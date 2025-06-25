@@ -141,10 +141,10 @@ export default function TaskForm({
 			setError("Due date is required");
 			return false;
 		}
-		if (new Date(formData.dueDate) < new Date()) {
-			setError("Due date cannot be in the past");
-			return false;
-		}
+		// if (new Date(formData.dueDate) < new Date()) {
+		// 	setError("Due date cannot be in the past");
+		// 	return false;
+		// }
 		return true;
 	};
 

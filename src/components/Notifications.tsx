@@ -24,17 +24,59 @@ interface Notification {
 	isRead: boolean;
 }
 
+const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "";
+
+async function registerPushNotifications(vapidPublicKey: string) {
+	if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+	try {
+		await navigator.serviceWorker.register("/sw.js");
+		const registration = await navigator.serviceWorker.ready;
+
+		const permission = await Notification.requestPermission();
+		if (permission !== "granted") return;
+		const subscription = await registration.pushManager.subscribe({
+			userVisibleOnly: true,
+			applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+		});
+		await fetch("/api/notifications/subscribe", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(subscription),
+		});
+	} catch (err) {
+		console.error("Push registration failed:", err);
+	}
+}
+
+function urlBase64ToUint8Array(base64String: string) {
+	const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+	const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+	const rawData = window.atob(base64);
+	const outputArray = new Uint8Array(rawData.length);
+	for (let i = 0; i < rawData.length; ++i) {
+		outputArray[i] = rawData.charCodeAt(i);
+	}
+	return outputArray;
+}
+
 export default function Notifications() {
 	const { data: session } = useSession();
 	const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 	const [notifications, setNotifications] = useState<Notification[]>([]);
 	const [unreadCount, setUnreadCount] = useState(0);
+	const [cookieConsent, setCookieConsent] = useState<boolean>(() => {
+		if (typeof window === "undefined") return false;
+		return document.cookie.includes("cookie_consent=true");
+	});
 
 	useEffect(() => {
 		if (session?.user?.email) {
 			fetchNotifications();
+			if (cookieConsent) {
+				registerPushNotifications(VAPID_PUBLIC_KEY);
+			}
 		}
-	}, [session]);
+	}, [session, cookieConsent]);
 
 	const fetchNotifications = async () => {
 		try {
@@ -66,8 +108,47 @@ export default function Notifications() {
 		}
 	};
 
+	const handleAcceptCookies = () => {
+		document.cookie = "cookie_consent=true; path=/; max-age=31536000";
+		setCookieConsent(true);
+	};
+
 	return (
 		<>
+			{/* Cookie Consent Banner */}
+			{!cookieConsent && (
+				<div
+					style={{
+						position: "fixed",
+						bottom: 0,
+						left: 0,
+						width: "100%",
+						background: "#222",
+						color: "#fff",
+						padding: "1rem",
+						zIndex: 2000,
+						display: "flex",
+						justifyContent: "center",
+						alignItems: "center",
+					}}>
+					<span style={{ marginRight: "1rem" }}>
+						We use cookies to enhance your experience. By accepting, you enable
+						notifications and the best features of this app.
+					</span>
+					<button
+						style={{
+							background: "#4caf50",
+							color: "#fff",
+							border: "none",
+							padding: "0.5rem 1rem",
+							borderRadius: 4,
+							cursor: "pointer",
+						}}
+						onClick={handleAcceptCookies}>
+						Accept
+					</button>
+				</div>
+			)}
 			<IconButton
 				color="inherit"
 				onClick={handleClick}
