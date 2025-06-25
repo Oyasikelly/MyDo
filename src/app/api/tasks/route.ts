@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
 		const priority = formData.get("priority") as Priority;
 		const status = formData.get("status") as Status;
 		const dueDate = formData.get("dueDate") as string;
+		const dueTime = formData.get("dueTime") as string;
 		const frequency = formData.get("frequency") as Frequency;
 		const tags = JSON.parse((formData.get("tags") as string) || "[]");
 
@@ -79,6 +80,7 @@ export async function POST(request: NextRequest) {
 				priority,
 				status,
 				dueDate: new Date(dueDate),
+				dueTime,
 				frequency,
 				tags,
 				userId: user.id,

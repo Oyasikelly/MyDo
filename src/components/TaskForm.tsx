@@ -45,6 +45,7 @@ interface FormData {
 	priority: Priority;
 	status: Status;
 	dueDate: string;
+	dueTime: string;
 	frequency: Frequency | null;
 	tags: string[];
 	attachments: File[];
@@ -67,6 +68,7 @@ export default function TaskForm({
 		priority: "MEDIUM",
 		status: "PENDING",
 		dueDate: "",
+		dueTime: "",
 		frequency: null,
 		tags: [],
 		attachments: [],
@@ -82,6 +84,7 @@ export default function TaskForm({
 				dueDate: task.dueDate
 					? new Date(task.dueDate).toISOString().split("T")[0]
 					: "",
+				dueTime: task.dueTime || "",
 				frequency: task.frequency || null,
 				tags: task.tags || [],
 				attachments: [],
@@ -93,6 +96,7 @@ export default function TaskForm({
 				priority: "MEDIUM",
 				status: "PENDING",
 				dueDate: "",
+				dueTime: "",
 				frequency: null,
 				tags: [],
 				attachments: [],
@@ -141,10 +145,10 @@ export default function TaskForm({
 			setError("Due date is required");
 			return false;
 		}
-		// if (new Date(formData.dueDate) < new Date()) {
-		// 	setError("Due date cannot be in the past");
-		// 	return false;
-		// }
+		if (new Date(formData.dueDate) < new Date()) {
+			setError("Due date cannot be in the past");
+			return false;
+		}
 		return true;
 	};
 
@@ -162,6 +166,7 @@ export default function TaskForm({
 			formDataToSend.append("priority", formData.priority);
 			formDataToSend.append("status", formData.status);
 			formDataToSend.append("dueDate", formData.dueDate);
+			formDataToSend.append("dueTime", formData.dueTime);
 			formDataToSend.append("frequency", formData.frequency || "");
 			formDataToSend.append("tags", JSON.stringify(formData.tags));
 
@@ -366,6 +371,22 @@ export default function TaskForm({
 							value={formData.dueDate}
 							onChange={(e) => handleInputChange("dueDate", e.target.value)}
 							required
+							variant="outlined"
+							InputLabelProps={{ shrink: true }}
+							sx={{ mb: 2 }}
+						/>
+					</Grid>
+
+					<Grid
+						item
+						xs={12}
+						md={6}>
+						<TextField
+							fullWidth
+							label="Due Time"
+							type="time"
+							value={formData.dueTime}
+							onChange={(e) => handleInputChange("dueTime", e.target.value)}
 							variant="outlined"
 							InputLabelProps={{ shrink: true }}
 							sx={{ mb: 2 }}
